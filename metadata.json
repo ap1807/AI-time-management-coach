@@ -1,0 +1,6 @@
+{
+  "name": "AI Time Management Coach",
+  "description": "Chronos AI: A premium productivity platform that intelligently builds schedules, tracks habits, and provides expert AI coaching to help you achieve goals and reclaim your time.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["AI Scheduling", "AI Coaching", "Analytics", "Habit Tracking"]
+}
