@@ -3,7 +3,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, Task } from "./types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || '' });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not defined. Please configure it in your environment variables.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export const CHRONOS_SYSTEM_PROMPT = `You are "Chronos", a world-class AI Productivity & Time Management Coach.
 Your philosophy is based on "Deep Work", "Atomic Habits", and "Intentional Living".
@@ -18,6 +29,7 @@ ALWAYS output clear, professional content. When asked for a schedule, think abou
 
 export async function generateDailySchedule(profile: UserProfile, pendingTasks: Partial<Task>[]): Promise<Task[]> {
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `You are a time-blocking engine. Create an optimized full daily schedule (from wake to sleep) for this user:
@@ -60,27 +72,32 @@ export async function generateDailySchedule(profile: UserProfile, pendingTasks: 
 }
 
 export async function getCoachResponse(message: string, history: { role: 'user' | 'model', parts: { text: string }[] }[]) {
-  const chat = ai.chats.create({
-    model: "gemini-3-flash-preview",
-    config: {
-      systemInstruction: CHRONOS_SYSTEM_PROMPT,
-    }
-  });
+  try {
+    const ai = getAI();
+    const chat = ai.chats.create({
+      model: "gemini-3-flash-preview",
+      config: {
+        systemInstruction: CHRONOS_SYSTEM_PROMPT,
+      },
+      // Pass existing history EXCLUDING the latest message which we'll send via sendMessage
+      history: history.filter(h => h.parts[0].text !== message).map(h => ({ 
+        role: h.role, 
+        parts: h.parts 
+      }))
+    });
 
-  // We should ideally pass history, but simplified for now
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: [...history.map(h => ({ role: h.role, parts: h.parts })), { role: 'user', parts: [{ text: message }] }],
-    config: {
-      systemInstruction: CHRONOS_SYSTEM_PROMPT
-    }
-  });
-
-  return response.text;
+    const response = await chat.sendMessage(message);
+    return response.text;
+  } catch (error) {
+    console.error("AI Coach Response Error:", error);
+    // Return a friendly error message
+    return "I encountered a minor neurological glitch while processing that. Can you try rephrasing your thought?";
+  }
 }
 
 export async function breakdownGoal(goal: string) {
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Break down this big goal into a hierarchy of tasks: "${goal}".

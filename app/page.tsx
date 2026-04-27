@@ -22,8 +22,13 @@ export default function LandingPage() {
   const { state } = useAppStore();
   const router = useRouter();
 
+  React.useEffect(() => {
+    if (state.profile.onboarded) {
+      router.push('/dashboard');
+    }
+  }, [state.profile.onboarded, router]);
+
   if (state.profile.onboarded) {
-    router.push('/dashboard');
     return null;
   }
 

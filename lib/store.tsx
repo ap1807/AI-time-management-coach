@@ -6,7 +6,7 @@ import { AppState, initialProfile, Task, Habit, FocusSession, UserProfile } from
 interface AppContextType {
   state: AppState;
   updateProfile: (profile: Partial<UserProfile>) => void;
-  addTask: (task: Omit<Task, 'id' | 'completed' | 'date'>) => void;
+  addTask: (task: Omit<Task, 'id' | 'completed' | 'date'> & { date?: string }) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   addHabit: (habit: Omit<Habit, 'id' | 'completedDates'>) => void;
@@ -67,12 +67,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const addTask = (task: Omit<Task, 'id' | 'completed' | 'date'>) => {
+  const addTask = (task: Omit<Task, 'id' | 'completed' | 'date'> & { date?: string }) => {
     const newTask: Task = {
-      ...task,
+      title: task.title,
+      duration: task.duration,
+      priority: task.priority,
+      category: task.category,
+      startTime: task.startTime,
       id: Math.random().toString(36).substr(2, 9),
       completed: false,
-      date: new Date().toISOString().split('T')[0],
+      date: task.date || new Date().toISOString().split('T')[0],
     };
     setState(prev => ({
       ...prev,
